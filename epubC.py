@@ -27,9 +27,12 @@ See documentation on class Epub.
 """
 
 import tempfile, shutil, os, zipfile, hashlib
-#lxml imports
 from lxml.builder import ElementMaker
 from lxml import etree
+
+DCMI = "http://purl.org/dc/elements/1.1/"
+OPF = "http://www.idpf.org/2007/opf"
+NCX = "http://www.daisy.org/z3986/2005/ncx/"
 
 class Epub(object):
 	"""
@@ -72,18 +75,14 @@ class Epub(object):
 	
 	def _standard_setup(self):
 		"""Internal function to create standard files at the beginning."""
-		#Make internal directories
 		self._meta = os.path.abspath(os.path.join(self._path, "META-INF"))
 		self._oebps = os.path.abspath(os.path.join(self._path, "OEBPS"))
 		os.mkdir(self._meta)
 		os.mkdir(self._oebps)
-		#Write mimetype
 		with open(os.path.join(self._path, "mimetype"), "wt", encoding = "utf-8") as mimefile:
 			mimefile.write("application/epub+zip")
-		#Write meta container.xml - all readers start here.
 		#Contents pretty much the same always but use lxml anyway
 		E = ElementMaker(nsmap = {None: "urn:oasis:names:tc:opendocument:xmlns:container"})
-		#to allow dashes, set attribs for rootfile by hand here
 		rootfile_tag = E.rootfile()
 		rootfile_tag.set("full-path", "OEBPS/content.opf")
 		rootfile_tag.set("media-type", "application/oebps-package+xml")
@@ -94,7 +93,6 @@ class Epub(object):
 			version="1.0"
 			)
 		tree = topelem.getroottree()
-		#write into meta-inf in full representation
 		tree.write(os.path.join(self._meta, "container.xml"), pretty_print = True,
 				   xml_declaration = True, encoding = "utf-8")
 	
@@ -114,16 +112,11 @@ class Epub(object):
 		#(Filename in OEBPS, media-type, Title or None, id - Text)
 		self._files = []
 		self._path = os.path.abspath(tempfile.mkdtemp())
-		#Create Element Factories for later use.
 		#Content.opf creators
-		#DCMI Main namespace - workaround for use in lxml
-		dcmi = "http://purl.org/dc/elements/1.1/"
-		self._DCMI = ElementMaker(namespace = dcmi)
-		#OPF Main namespace with DCMI listed.
-		self._OPF = ElementMaker(nsmap = {None: "http://www.idpf.org/2007/opf",
-										  "dc": dcmi})
-		#DAISY ns for the ncx file
-		self._NCX = ElementMaker(nsmap = {None: "http://www.daisy.org/z3986/2005/ncx/"})
+		#OPF duplicate declarations to get exactly the namespacing behaviour we want from lxml
+		self._DCMI = ElementMaker(namespace = DCMI)
+		self._OPF = ElementMaker(nsmap = {None: OPF, "opf": OPF, "dc": DCMI})
+		self._NCX = ElementMaker(nsmap = {None: NCX})
 		self._standard_setup()
 
 	def close(self):
@@ -135,34 +128,23 @@ class Epub(object):
 	def _flush(self):
 		"""Internal function that writes XML files into directory. Regenerates
 		content-dependent data."""
-		#To prevent adding these files to the manifest, as creating now, remove
-		#if exist
-		for file in ["content.opf", "toc.ncx"]:
-			filen = os.path.join(self._oebps, file)
-			if os.path.exists(filen):
-				os.remove(filen)
 		
-		#Create DCMI namespace tags for use in OPF
 		title_tag = self._DCMI.title(self.title)
-		author_tag = self._DCMI.creator(self.author)
+		author_tag = self._DCMI.creator(self.author, **{"{%s}role" % OPF: "aut"})
 		uid_tag = self._DCMI.identifier(self.uid, id = "bookid")
 		language_tag = self._DCMI.language(self.language)
-		#Alias it to make it easiser
+
 		O = self._OPF
 		N = self._NCX
 
-		#ncx is always present and written by this
 		o_ncx = O.item(id = "ncx", href = "toc.ncx")
 		o_ncx.set("media-type", "application/x-dtbncx+xml")
-		#Manifest and spine for adding content
 		manifest = O.manifest(o_ncx)
 		spine = O.spine(toc="ncx")
-		#navmap for ncx
 		navmap = N.navMap()
 		#Keep track of content added for ncx play order
 		play_order = 1
 		
-		#iterate over added files.
 		for filename, media, title, uid in self._files:
 			item = O.item(id = uid, href = filename)
 			item.set("media-type", media)
@@ -213,17 +195,14 @@ class Epub(object):
 		ncx_tree = ncx_topelem.getroottree()
 		
 		opf_tree.write(os.path.join(self._oebps, "content.opf"), pretty_print = True,
-					   xml_declaration = True, encoding = "utf-8")
-		#NCX write, write doctype seperately - lxml doesn't seem to
-		#Assume a xml declaration, then add.
-		#lxml silliness - when I call tostring, and encoding str... I want my xml declaration
-		#too please! - decode it given a known encoding
+				   xml_declaration = True, encoding = "utf-8")
+		#lxml etree.tostring supports doctype decl but write doesn't
+		#As we fix the output to utf-8 in code, do encoding roundtrip to force xml decl from lxml
 		ncx_text = etree.tostring(ncx_tree, pretty_print = True, xml_declaration = True,
-								  encoding = "utf-8").decode("utf-8").splitlines(True)
-		ncx_text.insert(1, "<!DOCTYPE ncx PUBLIC '-//NISO//DTD ncx 2005-1//EN' 'http://www.daisy.org/z3986/2005/ncx-2005-1.dtd'>\n")
+								  encoding = "utf-8",
+								  doctype = "<!DOCTYPE ncx PUBLIC '-//NISO//DTD ncx 2005-1//EN' 'http://www.daisy.org/z3986/2005/ncx-2005-1.dtd'>\n").decode('utf-8')
 		with open(os.path.join(self._oebps, "toc.ncx"), "wt", encoding = "utf-8") as ncx:
-			for line in ncx_text:
-				ncx.write(line)
+			ncx.write(ncx_text)
 
 	def write(self, file):
 		"""Given an absolute filename, file, write as epub file.
@@ -233,13 +212,12 @@ class Epub(object):
 		"""
 		self._flush()
 		
-		#Final file output
 		epub = zipfile.ZipFile(file, mode="w", compression=zipfile.ZIP_DEFLATED)
 
-		#mimetype needs to be uncompressed and first.
+		#Write things outside of OEBPS dir
+		#mimetype needs to be uncompressed and first
 		epub.write(os.path.join(self._path, "mimetype"), arcname = "mimetype",
 				   compress_type=zipfile.ZIP_STORED)
-		#then container.xml
 		epub.write(os.path.join(self._meta, "container.xml"),
 				   arcname = os.path.join("META-INF", "container.xml"))
 
@@ -268,23 +246,18 @@ class Epub(object):
 		#Use md5 as ID, might be useful somewhere.
 		md5 = hashlib.md5()
 		with open(os.path.join(self._oebps, arcname), "wb") as arcfile:
-			# A FALLACY! Read in block size, but y'know... this fails
-			#for unicode strings... Why am I doing this again?
 			block = data.read(md5.block_size)
-			#Am I a string? Wrap a byte encode in here somewhere
 			if isinstance(block, str):
 				block = block.encode()
 				data_read = lambda : data.read(md5.block_size).encode()
 			else:
 				data_read = lambda : data.read(md5.block_size)
-			#Read file, update md5 and write
 			while len(block) != 0:
 				md5.update(block)
 				arcfile.write(block)
 				block = data_read()
 
-		#Update filelist - id's need to start with a letter according
-		#to epubcheck
+		#id's need to start with a letter according to epubcheck
 		self._files.append((arcname, media_type, content_title, "h" +
 							md5.hexdigest()))
 
