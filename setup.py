@@ -4,7 +4,7 @@ from distutils.core import setup
 
 setup(
 	name = "epubC",
-	version = "0.1.2",
+	version = "0.2",
 	description = ".epub file creator",
 	author = "Awad Mackie",
 	author_email = "firesock.serwalek@gmail.com",
@@ -17,10 +17,10 @@ setup(
 
         epub is an ebook file format by the IDPF
         (http://en.wikipedia.org/wiki/.epub). This library provides
-        classes to pack XHTML content together into a .epub file.
+        classes to pack XHTML content together into a .epub file version 2.0.
 
-	- Requires lxml - checked with 2.2.6
-	- Works with Python 3.1.2""",
+	- Requires lxml - checked with 3.0.1
+	- Works with Python 3.2.5""",
 	classifiers = [
 		"Development Status :: 4 - Beta",
 		"Environment :: Other Environment",

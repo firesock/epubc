@@ -26,7 +26,7 @@ This modules provides classes to create a EPUB file from scratch given data.
 See documentation on class Epub.
 """
 
-import tempfile, shutil, os, zipfile, hashlib
+import tempfile, shutil, os, zipfile, hashlib, datetime
 from lxml.builder import ElementMaker
 from lxml import etree
 
@@ -71,7 +71,61 @@ class Epub(object):
 	with epubC.Epub("Title", "Author", "ID") as ep:
 		ep.add("content.html", "application/xhtml+xml",	io.StringIO(html), "Chapter 1")
 		ep.write("test.epub")
+
+	In addition to attributes specified above, additional metadata attributes are supported:
+
+    - subject, description, publisher, contributor, date, type, format, source, relation, coverage, rights
+
+	Set them on the Epub object to write as OPF metadata. Please refer to the spec for further details.
+	Lists will be written as multiple tags and dates converted from Python datetime.date objects.	
 	"""
+
+	_uid_id_str = "bookid"
+
+	_metadata = dict(
+		title = ["title", {}],
+		author = ["creator", {"{%s}role" % OPF : "aut"}],
+		uid = ["identifier", {"id" : _uid_id_str}],
+		language = ["language", {}],
+		subject = ["subject", {}],
+		description = ["description", {}],
+		publisher = ["publisher", {}],
+		contributor = ["contributor", {}],
+		date = ["date", {}],
+		type = ["type", {}],
+		format = ["format", {}],
+		source = ["source", {}],
+		relation = ["relation", {}],
+		coverage = ["coverage", {}],
+		rights = ["rights", {}],
+		)
+
+	def _dcmi_taglist(self, attr_vals, tag, attribs):
+		"""Internal: get tags for single supported DCMI tag"""
+		if not isinstance(attr_vals, list):
+			attr_vals = [attr_vals]
+
+		taglist = []
+		for value in attr_vals:
+			#Just run through some common transformations
+			if isinstance(value, datetime.date):
+				value = value.isoformat()
+
+			taglist.append(getattr(self._DCMI, tag)(value, **attribs))
+
+		return taglist
+
+	def _dcmi_tags(self):
+		"""Internal: get list of all set DCMI tags"""
+		tags = []
+		
+		for py_attrib, (tag, attribs) in self._metadata.items():
+			attr_val = getattr(self, py_attrib, None)
+			if attr_val is not None:
+				tags.extend(self._dcmi_taglist(attr_val, tag, attribs))
+
+		return tags
+				
 	
 	def _standard_setup(self):
 		"""Internal function to create standard files at the beginning."""
@@ -129,11 +183,6 @@ class Epub(object):
 		"""Internal function that writes XML files into directory. Regenerates
 		content-dependent data."""
 		
-		title_tag = self._DCMI.title(self.title)
-		author_tag = self._DCMI.creator(self.author, **{"{%s}role" % OPF: "aut"})
-		uid_tag = self._DCMI.identifier(self.uid, id = "bookid")
-		language_tag = self._DCMI.language(self.language)
-
 		O = self._OPF
 		N = self._NCX
 
@@ -167,16 +216,13 @@ class Epub(object):
 		#Generate full trees
 		opf_topelem = O.package(
 			O.metadata(
-				title_tag,
-				author_tag,
-				uid_tag,
-				language_tag
+				*self._dcmi_tags()
 				),
 			manifest,
 			spine,
 			version = "2.0"
 			)
-		opf_topelem.set("unique-identifier", "bookid")
+		opf_topelem.set("unique-identifier", self._uid_id_str)
 		opf_tree = opf_topelem.getroottree()
 
 		ncx_topelem = N.ncx(

@@ -58,6 +58,14 @@ with epubC.Epub("Title", "Author", "ID") as ep:
 	ep.add("content.html", "application/xhtml+xml",	io.StringIO(html), "Chapter 1")
 	ep.write("test.epub")
 
+In addition to attributes specified above, additional metadata attributes are supported:
+
+- subject, description, publisher, contributor, date, type, format, source, relation, coverage, rights
+
+Set them on the Epub object to write as OPF metadata. Please refer to the spec for further details.
+Lists will be written as multiple tags and dates converted from Python datetime.date objects.	
+
+
 Known Issues/Improvements
 =========================
 
