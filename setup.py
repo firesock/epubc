@@ -10,7 +10,7 @@ setup(
 	author_email = "firesock.serwalek@gmail.com",
 	py_modules = ["epubC"],
 	license = "GPLv3",
-	url = "http://pypi.python.org/pypi/epubC",
+	url = "https://bitbucket.org/firesock/epubc/",
 	long_description = """\
 	epubC.py - .epub file creator
 	=============================
