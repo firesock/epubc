@@ -258,24 +258,22 @@ class Epub(object):
 		"""
 		self._flush()
 		
-		epub = zipfile.ZipFile(file, mode="w", compression=zipfile.ZIP_DEFLATED)
+		with zipfile.ZipFile(file, mode="w", compression=zipfile.ZIP_DEFLATED) as epub:
 
-		#Write things outside of OEBPS dir
-		#mimetype needs to be uncompressed and first
-		epub.write(os.path.join(self._path, "mimetype"), arcname = "mimetype",
-				   compress_type=zipfile.ZIP_STORED)
-		epub.write(os.path.join(self._meta, "container.xml"),
-				   arcname = os.path.join("META-INF", "container.xml"))
+			#Write things outside of OEBPS dir
+			#mimetype needs to be uncompressed and first
+			epub.write(os.path.join(self._path, "mimetype"), arcname = "mimetype",
+					   compress_type=zipfile.ZIP_STORED)
+			epub.write(os.path.join(self._meta, "container.xml"),
+					   arcname = os.path.join("META-INF", "container.xml"))
 
-		#Walk the directory chain, add everything in OEBPS
-		top_len = len(self._path)
-		for path, dirnames, filenames in os.walk(self._oebps):
-			#Make archive directories relative to top, not absolute
-			arc_dir = path[top_len:]
-			for filen in filenames:
-				epub.write(os.path.join(path, filen), arcname = os.path.join(arc_dir, filen))
-
-		epub.close()
+			#Walk the directory chain, add everything in OEBPS
+			top_len = len(self._path)
+			for path, dirnames, filenames in os.walk(self._oebps):
+				#Make archive directories relative to top, not absolute
+				arc_dir = path[top_len:]
+				for filen in filenames:
+					epub.write(os.path.join(path, filen), arcname = os.path.join(arc_dir, filen))
 
 	def add(self, arcname, media_type, data, content_title = None):
 		"""Main method to add contents to epub file.
