@@ -3,8 +3,8 @@ epubC - .epub file creator
 
 Creates .epub files according to idpf standards.
 
-- Requires lxml - checked with 2.2.6
-- Works with Python 3.1.2
+- Requires lxml - checked with 3.3.5
+- Works with Python 3.3.3
 
 Installation
 ============

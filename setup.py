@@ -19,8 +19,8 @@ setup(
         (http://en.wikipedia.org/wiki/.epub). This library provides
         classes to pack XHTML content together into a .epub file version 2.0.
 
-	- Requires lxml - checked with 3.0.1
-	- Works with Python 3.2.5""",
+	- Requires lxml - checked with 3.3.5
+	- Works with Python 3.3.3""",
 	classifiers = [
 		"Development Status :: 4 - Beta",
 		"Environment :: Other Environment",
