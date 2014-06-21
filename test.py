@@ -90,8 +90,9 @@ class epubCTest(unittest.TestCase):
 		os.remove(self.testfile)
 
 	def test_epubCheck(self):
-		#TODO: Replace this with Java test calling into epubcheck libs
-		subprocess.call("epubcheck " + self.testfile, shell = True)
+		# epubcheck as a library is relatively heavyweight solution
+		# If going that way, could check for warnings and errors separately though
+		subprocess.check_call("epubcheck " + self.testfile, shell = True)
 
 	def test_containerStructure(self):
 		self.assertCountEqual(self.epub.namelist(), ['mimetype',
