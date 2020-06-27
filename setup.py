@@ -1,16 +1,17 @@
 #!/usr/bin/env python
 
-from distutils.core import setup
+from setuptools import setup
 
 setup(
 	name = "epubC",
-	version = "0.2",
+	version = "0.2.post1",
 	description = ".epub file creator",
 	author = "Awad Mackie",
 	author_email = "firesock.serwalek@gmail.com",
 	py_modules = ["epubC"],
 	license = "GPLv3",
-	url = "https://bitbucket.org/firesock/epubc/",
+	url = "https://github.com/firesock/epubc",
+	long_description_content_type = "text/plain",
 	long_description = """\
 	epubC.py - .epub file creator
 	=============================
@@ -30,5 +31,5 @@ setup(
 		"Programming Language :: Python",
 		"Programming Language :: Python :: 3",
 		"Topic :: Software Development :: Libraries :: Python Modules"],
-	keywords = ["epub", "ebook"]
+	keywords = ["epub", "ebook"],
 	)
